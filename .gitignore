@@ -1,0 +1,50 @@
+# ─── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# ─── Node.js ─────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+
+# ─── IDE ─────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ─── Environment ─────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Docker ──────────────────────────────────────────────
+docker/volumes/
+
+# ─── Virtual environments ────────────────────────────────
+.venv/
+venv/
+env/
+
+# ─── Test artifacts ─────────────────────────────────────
+test-results/
+playwright-report/
+
+# ─── uv ──────────────────────────────────────────────────
+backend/.venv/

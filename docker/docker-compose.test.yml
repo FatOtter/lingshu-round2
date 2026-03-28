@@ -1,0 +1,50 @@
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lingshu_test
+      POSTGRES_PASSWORD: lingshu_test
+      POSTGRES_DB: lingshu_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lingshu_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  neo4j-test:
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: neo4j/testpassword
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p testpassword 'RETURN 1'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nessie-test:
+    image: projectnessie/nessie:0.76.0
+    ports:
+      - "19121:19120"
+    environment:
+      NESSIE_VERSION_STORE_TYPE: IN_MEMORY

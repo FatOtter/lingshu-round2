@@ -1,0 +1,197 @@
+"""Unified exception classes, error codes, and FastAPI exception handlers."""
+
+from enum import StrEnum
+from typing import Any
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+from lingshu.infra.context import get_request_id
+
+
+class ErrorCode(StrEnum):
+    """Error code enumeration: {CAPABILITY}_{CATEGORY}_{SPECIFIC}."""
+
+    # Common
+    COMMON_UNAUTHORIZED = "COMMON_UNAUTHORIZED"
+    COMMON_FORBIDDEN = "COMMON_FORBIDDEN"
+    COMMON_NOT_FOUND = "COMMON_NOT_FOUND"
+    COMMON_INVALID_INPUT = "COMMON_INVALID_INPUT"
+    COMMON_INTERNAL_ERROR = "COMMON_INTERNAL_ERROR"
+    COMMON_CONFLICT = "COMMON_CONFLICT"
+
+    # Setting
+    SETTING_AUTH_INVALID_CREDENTIALS = "SETTING_AUTH_INVALID_CREDENTIALS"
+    SETTING_AUTH_TOKEN_EXPIRED = "SETTING_AUTH_TOKEN_EXPIRED"
+    SETTING_AUTH_TOKEN_REVOKED = "SETTING_AUTH_TOKEN_REVOKED"
+    SETTING_USER_NOT_FOUND = "SETTING_USER_NOT_FOUND"
+    SETTING_USER_EMAIL_EXISTS = "SETTING_USER_EMAIL_EXISTS"
+    SETTING_PERMISSION_DENIED = "SETTING_PERMISSION_DENIED"
+
+    # Ontology
+    ONTOLOGY_NOT_FOUND = "ONTOLOGY_NOT_FOUND"
+    ONTOLOGY_DEPENDENCY_CONFLICT = "ONTOLOGY_DEPENDENCY_CONFLICT"
+    ONTOLOGY_VERSION_CONFLICT = "ONTOLOGY_VERSION_CONFLICT"
+    ONTOLOGY_VALIDATION_FAILED = "ONTOLOGY_VALIDATION_FAILED"
+    ONTOLOGY_LOCK_CONFLICT = "ONTOLOGY_LOCK_CONFLICT"
+    ONTOLOGY_LOCK_REQUIRED = "ONTOLOGY_LOCK_REQUIRED"
+    ONTOLOGY_CYCLE_DETECTED = "ONTOLOGY_CYCLE_DETECTED"
+    ONTOLOGY_DUPLICATE_API_NAME = "ONTOLOGY_DUPLICATE_API_NAME"
+    ONTOLOGY_IMMUTABLE_FIELD = "ONTOLOGY_IMMUTABLE_FIELD"
+    ONTOLOGY_CONTRACT_VIOLATION = "ONTOLOGY_CONTRACT_VIOLATION"
+    ONTOLOGY_STAGING_EMPTY = "ONTOLOGY_STAGING_EMPTY"
+    ONTOLOGY_UNCOMMITTED_CHANGES = "ONTOLOGY_UNCOMMITTED_CHANGES"
+    ONTOLOGY_DRAFT_NOT_FOUND = "ONTOLOGY_DRAFT_NOT_FOUND"
+    ONTOLOGY_STAGING_NOT_FOUND = "ONTOLOGY_STAGING_NOT_FOUND"
+
+    # Data
+    DATA_SOURCE_UNREACHABLE = "DATA_SOURCE_UNREACHABLE"
+    DATA_SOURCE_NOT_FOUND = "DATA_SOURCE_NOT_FOUND"
+    DATA_CONNECTION_IN_USE = "DATA_CONNECTION_IN_USE"
+    DATA_QUERY_TIMEOUT = "DATA_QUERY_TIMEOUT"
+    DATA_SCHEMA_MISMATCH = "DATA_SCHEMA_MISMATCH"
+    DATA_ASSET_NOT_FOUND = "DATA_ASSET_NOT_FOUND"
+    DATA_ASSET_NOT_MAPPED = "DATA_ASSET_NOT_MAPPED"
+    DATA_MASKED_FIELD_NOT_SORTABLE = "DATA_MASKED_FIELD_NOT_SORTABLE"
+    DATA_BRANCH_NOT_FOUND = "DATA_BRANCH_NOT_FOUND"
+    DATA_BRANCH_CONFLICT = "DATA_BRANCH_CONFLICT"
+    DATA_BRANCH_UNAVAILABLE = "DATA_BRANCH_UNAVAILABLE"
+    DATA_EDITLOG_WRITE_FAILED = "DATA_EDITLOG_WRITE_FAILED"
+    DATA_ROW_LOCK_CONFLICT = "DATA_ROW_LOCK_CONFLICT"
+
+    # Function
+    FUNCTION_NOT_FOUND = "FUNCTION_NOT_FOUND"
+    FUNCTION_EXECUTION_FAILED = "FUNCTION_EXECUTION_FAILED"
+    FUNCTION_TIMEOUT = "FUNCTION_TIMEOUT"
+    FUNCTION_PARAM_INVALID = "FUNCTION_PARAM_INVALID"
+    FUNCTION_PARAM_INSTANCE_NOT_FOUND = "FUNCTION_PARAM_INSTANCE_NOT_FOUND"
+    FUNCTION_INTERFACE_NOT_IMPLEMENTED = "FUNCTION_INTERFACE_NOT_IMPLEMENTED"
+    FUNCTION_WRITEBACK_DISABLED = "FUNCTION_WRITEBACK_DISABLED"
+    FUNCTION_CONFIRMATION_EXPIRED = "FUNCTION_CONFIRMATION_EXPIRED"
+    FUNCTION_IN_USE = "FUNCTION_IN_USE"
+
+    # Copilot
+    COPILOT_SESSION_NOT_FOUND = "COPILOT_SESSION_NOT_FOUND"
+    COPILOT_SESSION_EXPIRED = "COPILOT_SESSION_EXPIRED"
+    COPILOT_TOOL_FAILED = "COPILOT_TOOL_FAILED"
+    COPILOT_TOOL_LIMIT_EXCEEDED = "COPILOT_TOOL_LIMIT_EXCEEDED"
+    COPILOT_MODEL_UNAVAILABLE = "COPILOT_MODEL_UNAVAILABLE"
+    COPILOT_MCP_CONNECTION_FAILED = "COPILOT_MCP_CONNECTION_FAILED"
+    COPILOT_MCP_DISCOVERY_FAILED = "COPILOT_MCP_DISCOVERY_FAILED"
+
+
+# Error code to HTTP status mapping
+ERROR_STATUS_MAP: dict[ErrorCode, int] = {
+    ErrorCode.COMMON_UNAUTHORIZED: 401,
+    ErrorCode.COMMON_FORBIDDEN: 403,
+    ErrorCode.COMMON_NOT_FOUND: 404,
+    ErrorCode.COMMON_INVALID_INPUT: 400,
+    ErrorCode.COMMON_INTERNAL_ERROR: 500,
+    ErrorCode.COMMON_CONFLICT: 409,
+    ErrorCode.SETTING_AUTH_INVALID_CREDENTIALS: 401,
+    ErrorCode.SETTING_AUTH_TOKEN_EXPIRED: 401,
+    ErrorCode.SETTING_AUTH_TOKEN_REVOKED: 401,
+    ErrorCode.SETTING_USER_NOT_FOUND: 404,
+    ErrorCode.SETTING_USER_EMAIL_EXISTS: 409,
+    ErrorCode.SETTING_PERMISSION_DENIED: 403,
+    ErrorCode.ONTOLOGY_NOT_FOUND: 404,
+    ErrorCode.ONTOLOGY_DEPENDENCY_CONFLICT: 409,
+    ErrorCode.ONTOLOGY_VERSION_CONFLICT: 409,
+    ErrorCode.ONTOLOGY_VALIDATION_FAILED: 422,
+    ErrorCode.ONTOLOGY_LOCK_CONFLICT: 409,
+    ErrorCode.ONTOLOGY_LOCK_REQUIRED: 403,
+    ErrorCode.ONTOLOGY_CYCLE_DETECTED: 422,
+    ErrorCode.ONTOLOGY_DUPLICATE_API_NAME: 409,
+    ErrorCode.ONTOLOGY_IMMUTABLE_FIELD: 422,
+    ErrorCode.ONTOLOGY_CONTRACT_VIOLATION: 422,
+    ErrorCode.ONTOLOGY_STAGING_EMPTY: 400,
+    ErrorCode.ONTOLOGY_UNCOMMITTED_CHANGES: 409,
+    ErrorCode.ONTOLOGY_DRAFT_NOT_FOUND: 404,
+    ErrorCode.ONTOLOGY_STAGING_NOT_FOUND: 404,
+    ErrorCode.DATA_SOURCE_UNREACHABLE: 503,
+    ErrorCode.DATA_SOURCE_NOT_FOUND: 404,
+    ErrorCode.DATA_CONNECTION_IN_USE: 409,
+    ErrorCode.DATA_QUERY_TIMEOUT: 504,
+    ErrorCode.DATA_SCHEMA_MISMATCH: 422,
+    ErrorCode.DATA_ASSET_NOT_FOUND: 404,
+    ErrorCode.DATA_ASSET_NOT_MAPPED: 400,
+    ErrorCode.DATA_MASKED_FIELD_NOT_SORTABLE: 400,
+    ErrorCode.DATA_BRANCH_NOT_FOUND: 404,
+    ErrorCode.DATA_BRANCH_CONFLICT: 409,
+    ErrorCode.DATA_BRANCH_UNAVAILABLE: 503,
+    ErrorCode.DATA_EDITLOG_WRITE_FAILED: 500,
+    ErrorCode.DATA_ROW_LOCK_CONFLICT: 409,
+    ErrorCode.FUNCTION_NOT_FOUND: 404,
+    ErrorCode.FUNCTION_EXECUTION_FAILED: 500,
+    ErrorCode.FUNCTION_TIMEOUT: 504,
+    ErrorCode.FUNCTION_PARAM_INVALID: 400,
+    ErrorCode.FUNCTION_PARAM_INSTANCE_NOT_FOUND: 404,
+    ErrorCode.FUNCTION_INTERFACE_NOT_IMPLEMENTED: 422,
+    ErrorCode.FUNCTION_WRITEBACK_DISABLED: 422,
+    ErrorCode.FUNCTION_CONFIRMATION_EXPIRED: 410,
+    ErrorCode.FUNCTION_IN_USE: 409,
+    ErrorCode.COPILOT_SESSION_NOT_FOUND: 404,
+    ErrorCode.COPILOT_SESSION_EXPIRED: 410,
+    ErrorCode.COPILOT_TOOL_FAILED: 500,
+    ErrorCode.COPILOT_TOOL_LIMIT_EXCEEDED: 429,
+    ErrorCode.COPILOT_MODEL_UNAVAILABLE: 503,
+    ErrorCode.COPILOT_MCP_CONNECTION_FAILED: 502,
+    ErrorCode.COPILOT_MCP_DISCOVERY_FAILED: 502,
+}
+
+
+class AppError(Exception):
+    """Base application error with structured error code."""
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        self.code = code
+        self.message = message
+        self.details = details or {}
+        super().__init__(message)
+
+    @property
+    def status_code(self) -> int:
+        return ERROR_STATUS_MAP.get(self.code, 500)
+
+
+def _build_error_response(error: AppError) -> dict[str, Any]:
+    """Build standardized error response body."""
+    body: dict[str, Any] = {
+        "error": {
+            "code": error.code.value,
+            "message": error.message,
+        },
+        "metadata": {
+            "request_id": get_request_id(),
+        },
+    }
+    if error.details:
+        body["error"]["details"] = error.details
+    return body
+
+
+def register_exception_handlers(app: FastAPI) -> None:
+    """Register exception handlers on the FastAPI app."""
+
+    @app.exception_handler(AppError)
+    async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=_build_error_response(exc),
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+        error = AppError(
+            code=ErrorCode.COMMON_INTERNAL_ERROR,
+            message="Internal server error",
+        )
+        return JSONResponse(
+            status_code=500,
+            content=_build_error_response(error),
+        )

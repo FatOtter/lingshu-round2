@@ -1,0 +1,152 @@
+services:
+  # ── Application services ──────────────────────────────────
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      LINGSHU_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-lingshu}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-lingshu}"
+      LINGSHU_NEO4J_URI: "bolt://neo4j:7687"
+      LINGSHU_NEO4J_USER: "neo4j"
+      LINGSHU_NEO4J_PASSWORD: "${LINGSHU_NEO4J_PASSWORD:?Set LINGSHU_NEO4J_PASSWORD in .env}"
+      LINGSHU_REDIS_URL: "redis://redis:6379/0"
+      LINGSHU_SERVER_ENV: "production"
+      LINGSHU_AUTH_MODE: "production"
+      LINGSHU_JWT_SECRET: "${LINGSHU_JWT_SECRET:?Set LINGSHU_JWT_SECRET in .env}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\")'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://backend:8000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # ── Infrastructure services ───────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-lingshu}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+      POSTGRES_DB: "${POSTGRES_DB:-lingshu}"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lingshu"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: "neo4j/${LINGSHU_NEO4J_PASSWORD:?Set LINGSHU_NEO4J_PASSWORD in .env}"
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p \"$NEO4J_AUTH_PASSWORD\" 'RETURN 1' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  foundationdb:
+    image: foundationdb/foundationdb:7.3.27
+    ports:
+      - "4500:4500"
+    volumes:
+      - fdb_data:/var/fdb/data
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minioadmin}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  nessie:
+    image: projectnessie/nessie:0.76.0
+    ports:
+      - "19120:19120"
+    environment:
+      NESSIE_VERSION_STORE_TYPE: IN_MEMORY
+
+  # ── Apache Doris (OLAP hot-data layer) ──────────────────────
+  doris-fe:
+    image: apache/doris:2.1-fe
+    ports:
+      - "8030:8030"   # HTTP API
+      - "9030:9030"   # MySQL protocol
+    environment:
+      FE_SERVERS: "fe1:doris-fe:9010"
+      FE_ID: 1
+    volumes:
+      - doris_fe_data:/opt/apache-doris/fe/doris-meta
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8030/api/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  doris-be:
+    image: apache/doris:2.1-be
+    environment:
+      FE_SERVERS: "fe1:doris-fe:9010"
+      BE_ADDR: "doris-be:9050"
+    volumes:
+      - doris_be_data:/opt/apache-doris/be/storage
+    depends_on:
+      doris-fe:
+        condition: service_healthy
+
+  # NOTE: Flink CDC is a runtime job, not a persistent service.
+  # Deploy Flink CDC jobs separately via `flink run` against a Flink cluster.
+  # See data/pipeline/cdc_config.py for job configuration generation.
+
+volumes:
+  postgres_data:
+  neo4j_data:
+  redis_data:
+  fdb_data:
+  minio_data:
+  doris_fe_data:
+  doris_be_data:

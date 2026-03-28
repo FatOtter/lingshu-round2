@@ -1,0 +1,98 @@
+services:
+  # ── Application ──────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8100:8000"
+    environment:
+      LINGSHU_DATABASE_URL: "postgresql+asyncpg://lingshu:lingshu@postgres:5432/lingshu"
+      LINGSHU_NEO4J_URI: "bolt://neo4j:7687"
+      LINGSHU_NEO4J_USER: "neo4j"
+      LINGSHU_NEO4J_PASSWORD: "lingshu123"
+      LINGSHU_REDIS_URL: "redis://redis:6379/0"
+      LINGSHU_CORS_ORIGINS: "http://localhost:3100,http://localhost:3000"
+      LINGSHU_AUTH_MODE: "dev"
+      LINGSHU_RBAC_ENABLED: "false"
+      LINGSHU_JWT_SECRET: "dev-secret-round2"
+      LINGSHU_SEED_ADMIN_EMAIL: "admin@lingshu.dev"
+      LINGSHU_SEED_ADMIN_PASSWORD: "admin123"
+      LINGSHU_SEED_TENANT_NAME: "Default"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\")'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://localhost:8100"
+    ports:
+      - "3100:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8100"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # ── Infrastructure ───────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lingshu
+      POSTGRES_PASSWORD: lingshu
+      POSTGRES_DB: lingshu
+    ports:
+      - "5440:5432"
+    volumes:
+      - r2_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lingshu"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: neo4j/lingshu123
+    ports:
+      - "7480:7474"
+      - "7690:7687"
+    volumes:
+      - r2_neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p lingshu123 'RETURN 1' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6390:6379"
+    volumes:
+      - r2_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  r2_postgres_data:
+  r2_neo4j_data:
+  r2_redis_data:

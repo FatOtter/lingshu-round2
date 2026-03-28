@@ -1,0 +1,232 @@
+# LingShu Production Docker Compose
+# Usage:
+#   cp .env.example .env   # then edit .env with real values
+#   docker compose -f docker-compose.prod.yml up -d
+
+networks:
+  lingshu-frontend:
+    driver: bridge
+  lingshu-backend:
+    driver: bridge
+    internal: true
+
+services:
+  # ── Application ──────────────────────────────────────────
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8100}:8000"
+    env_file: .env
+    environment:
+      LINGSHU_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      LINGSHU_NEO4J_URI: "bolt://neo4j:7687"
+      LINGSHU_NEO4J_USER: "${NEO4J_USER}"
+      LINGSHU_NEO4J_PASSWORD: "${NEO4J_PASSWORD}"
+      LINGSHU_REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379/0"
+      LINGSHU_SERVER_ENV: "production"
+      LINGSHU_AUTH_MODE: "production"
+      LINGSHU_JWT_SECRET: "${LINGSHU_JWT_SECRET}"
+      LINGSHU_JWT_ALGORITHM: "${LINGSHU_JWT_ALGORITHM:-HS256}"
+      LINGSHU_ACCESS_TOKEN_TTL: "${LINGSHU_ACCESS_TOKEN_TTL:-900}"
+      LINGSHU_REFRESH_TOKEN_TTL: "${LINGSHU_REFRESH_TOKEN_TTL:-604800}"
+      LINGSHU_CORS_ORIGINS: "${LINGSHU_CORS_ORIGINS}"
+      LINGSHU_SEED_ADMIN_EMAIL: "${LINGSHU_SEED_ADMIN_EMAIL}"
+      LINGSHU_SEED_ADMIN_PASSWORD: "${LINGSHU_SEED_ADMIN_PASSWORD}"
+      LINGSHU_SEED_TENANT_NAME: "${LINGSHU_SEED_TENANT_NAME:-Default}"
+      LINGSHU_COPILOT_PROVIDER: "${LINGSHU_COPILOT_PROVIDER:-gemini}"
+      LINGSHU_COPILOT_API_KEY: "${LINGSHU_COPILOT_API_KEY:-}"
+      LINGSHU_COPILOT_MODEL: "${LINGSHU_COPILOT_MODEL:-}"
+      LINGSHU_RBAC_ENABLED: "${LINGSHU_RBAC_ENABLED:-false}"
+      LINGSHU_OIDC_ISSUER_URL: "${LINGSHU_OIDC_ISSUER_URL:-}"
+      LINGSHU_OIDC_CLIENT_ID: "${LINGSHU_OIDC_CLIENT_ID:-}"
+      LINGSHU_OIDC_CLIENT_SECRET: "${LINGSHU_OIDC_CLIENT_SECRET:-}"
+      LINGSHU_OIDC_REDIRECT_URI: "${LINGSHU_OIDC_REDIRECT_URI:-}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\")'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - lingshu-frontend
+      - lingshu-backend
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL}"
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3100}:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL}"
+      NODE_ENV: production
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - lingshu-frontend
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Infrastructure ───────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+    # No host port exposed — only accessible within backend network
+    volumes:
+      - r2_prod_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lingshu-backend
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "log_min_duration_statement=1000"
+
+  neo4j:
+    image: neo4j:5-community
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: "${NEO4J_USER}/${NEO4J_PASSWORD}"
+      NEO4J_PLUGINS: '[]'
+      NEO4J_server_memory_heap_initial__size: "512m"
+      NEO4J_server_memory_heap_max__size: "1G"
+      NEO4J_server_memory_pagecache_size: "256m"
+    # No host port exposed — only accessible within backend network
+    volumes:
+      - r2_prod_neo4j_data:/data
+      - r2_prod_neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u ${NEO4J_USER} -p ${NEO4J_PASSWORD} 'RETURN 1' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+    networks:
+      - lingshu-backend
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # No host port exposed — only accessible within backend network
+    volumes:
+      - r2_prod_redis_data:/data
+    command:
+      - "redis-server"
+      - "--requirepass"
+      - "${REDIS_PASSWORD}"
+      - "--maxmemory"
+      - "256mb"
+      - "--maxmemory-policy"
+      - "allkeys-lru"
+      - "--appendonly"
+      - "yes"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lingshu-backend
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+volumes:
+  r2_prod_postgres_data:
+  r2_prod_neo4j_data:
+  r2_prod_neo4j_logs:
+  r2_prod_redis_data:
