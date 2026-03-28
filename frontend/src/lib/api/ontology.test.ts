@@ -24,7 +24,10 @@ describe("ontologyApi", () => {
       const params = { offset: 0, limit: 10, branch: "dev" };
       const result = await ontologyApi.queryObjectTypes(params);
 
-      expect(apiClient.post).toHaveBeenCalledWith("/ontology/v1/object-types/query", params);
+      expect(apiClient.post).toHaveBeenCalledWith("/ontology/v1/object-types/query", {
+        pagination: { page: 1, page_size: 10 },
+        include_drafts: true,
+      });
       expect(result).toEqual(mockResponse);
     });
 
@@ -33,7 +36,10 @@ describe("ontologyApi", () => {
 
       await ontologyApi.queryObjectTypes();
 
-      expect(apiClient.post).toHaveBeenCalledWith("/ontology/v1/object-types/query", undefined);
+      expect(apiClient.post).toHaveBeenCalledWith("/ontology/v1/object-types/query", {
+        pagination: { page: 1, page_size: 20 },
+        include_drafts: true,
+      });
     });
 
     it("getObjectType fetches by rid", async () => {
@@ -89,7 +95,10 @@ describe("ontologyApi", () => {
 
       await ontologyApi.queryLinkTypes({ limit: 5 });
 
-      expect(apiClient.post).toHaveBeenCalledWith("/ontology/v1/link-types/query", { limit: 5 });
+      expect(apiClient.post).toHaveBeenCalledWith("/ontology/v1/link-types/query", {
+        pagination: { page: 1, page_size: 5 },
+        include_drafts: true,
+      });
     });
   });
 

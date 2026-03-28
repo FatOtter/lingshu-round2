@@ -78,6 +78,7 @@ def _make_entity_routes(
         entities, total = await svc._query_entities(
             _label, search=req.search,
             lifecycle_status=req.lifecycle_status,
+            include_drafts=req.include_drafts,
             offset=offset, limit=req.pagination.page_size,
         )
         return PagedResponse(

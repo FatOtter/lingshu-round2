@@ -305,6 +305,7 @@ class OntologyServiceImpl:
         *,
         search: str | None = None,
         lifecycle_status: str | None = None,
+        include_drafts: bool = True,
         offset: int = 0,
         limit: int = 20,
     ) -> tuple[list[EntityResponse], int]:
@@ -313,11 +314,12 @@ class OntologyServiceImpl:
         if lifecycle_status:
             filters["lifecycle_status"] = lifecycle_status
 
-        nodes, total = await self._graph.list_active_nodes(
+        nodes, total = await self._graph.list_nodes(
             label, tenant_id,
             offset=offset, limit=limit,
             filters=filters if filters else None,
             search=search,
+            include_drafts=include_drafts,
         )
         responses = [_node_to_response(n, label) for n in nodes]
         # Populate property_types for ObjectType and LinkType

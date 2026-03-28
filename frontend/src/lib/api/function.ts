@@ -33,7 +33,7 @@ export const functionApi = {
 
   // Capabilities (returns flat list, no pagination)
   queryCapabilities: (params?: { type?: string }) =>
-    apiClient.post<ApiResponse<CapabilityDescriptor[]>>(`${PREFIX}/capabilities/query`, params),
+    apiClient.post<ApiResponse<CapabilityDescriptor[]>>(`${PREFIX}/capabilities/query`, params ?? {}),
 
   // Overview
   getOverview: () =>

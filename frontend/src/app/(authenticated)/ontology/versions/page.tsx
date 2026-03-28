@@ -91,7 +91,7 @@ export default function VersionsPage() {
     },
     { key: "entity_count", label: "Entities" },
     {
-      key: "snapshot_id",
+      key: "actions",
       label: "Actions",
       render: (_value, row) => {
         const snapshot = row as unknown as Snapshot;

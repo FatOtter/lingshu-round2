@@ -128,6 +128,7 @@ class UpdatePropertyTypeRequest(BaseModel):
 class QueryEntitiesRequest(BaseModel):
     search: str | None = None
     lifecycle_status: str | None = None
+    include_drafts: bool = True
     pagination: PaginationRequest = Field(default_factory=PaginationRequest)
 
 

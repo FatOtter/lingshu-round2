@@ -30,6 +30,7 @@ def mock_graph() -> AsyncMock:
     g.update_node = AsyncMock(return_value=None)
     g.delete_node = AsyncMock(return_value=True)
     g.list_active_nodes = AsyncMock(return_value=([], 0))
+    g.list_nodes = AsyncMock(return_value=([], 0))
     g.get_related_nodes = AsyncMock(return_value=[])
     g.count_incoming_references = AsyncMock(return_value=0)
     g.create_relationship = AsyncMock(return_value=True)
@@ -333,7 +334,7 @@ class TestQueryEntities:
     async def test_query_with_results(self, mock_tid, svc, mock_graph):
         nodes = [{"rid": "r1", "api_name": "t", "display_name": "T",
                   "is_draft": False, "is_staging": False, "is_active": True}]
-        mock_graph.list_active_nodes.return_value = (nodes, 1)
+        mock_graph.list_nodes.return_value = (nodes, 1)
         result, total = await svc._query_entities("ObjectType", search="t")
         assert total == 1
         assert len(result) == 1
@@ -341,10 +342,9 @@ class TestQueryEntities:
     @pytest.mark.asyncio
     @patch("lingshu.ontology.service.get_tenant_id", return_value="t1")
     async def test_query_with_lifecycle_filter(self, mock_tid, svc, mock_graph):
-        mock_graph.list_active_nodes.return_value = ([], 0)
+        mock_graph.list_nodes.return_value = ([], 0)
         await svc._query_entities("LinkType", lifecycle_status="active")
-        # Verify filters were passed
-        call_kwargs = mock_graph.list_active_nodes.call_args[1]
+        call_kwargs = mock_graph.list_nodes.call_args[1]
         assert call_kwargs["filters"] == {"lifecycle_status": "active"}
 
 
