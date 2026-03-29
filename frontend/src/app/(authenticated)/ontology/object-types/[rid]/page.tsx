@@ -54,7 +54,7 @@ export default function ObjectTypeEditorPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "object-type", rid],
-    queryFn: () => ontologyApi.getObjectType(rid),
+    queryFn: () => ontologyApi.getObjectTypeDraft(rid),
     enabled: !isNew,
   });
 

@@ -33,6 +33,8 @@ export const ontologyApi = {
     apiClient.post<PagedResponse<LinkType>>(`${PREFIX}/link-types/query`, params),
   getLinkType: (rid: string, branch?: string) =>
     apiClient.get<ApiResponse<LinkType>>(`${PREFIX}/link-types/${rid}${branch ? `?branch=${branch}` : ""}`),
+  getLinkTypeDraft: (rid: string) =>
+    apiClient.get<ApiResponse<LinkType>>(`${PREFIX}/link-types/${rid}/draft`),
   createLinkType: (data: Record<string, unknown>) =>
     apiClient.post<ApiResponse<LinkType>>(`${PREFIX}/link-types`, data),
   updateLinkType: (rid: string, data: Record<string, unknown>) =>
@@ -45,6 +47,8 @@ export const ontologyApi = {
     apiClient.post<PagedResponse<InterfaceType>>(`${PREFIX}/interface-types/query`, params),
   getInterfaceType: (rid: string) =>
     apiClient.get<ApiResponse<InterfaceType>>(`${PREFIX}/interface-types/${rid}`),
+  getInterfaceTypeDraft: (rid: string) =>
+    apiClient.get<ApiResponse<InterfaceType>>(`${PREFIX}/interface-types/${rid}/draft`),
   createInterfaceType: (data: Record<string, unknown>) =>
     apiClient.post<ApiResponse<InterfaceType>>(`${PREFIX}/interface-types`, data),
   updateInterfaceType: (rid: string, data: Record<string, unknown>) =>
@@ -57,6 +61,8 @@ export const ontologyApi = {
     apiClient.post<PagedResponse<ActionType>>(`${PREFIX}/action-types/query`, params),
   getActionType: (rid: string) =>
     apiClient.get<ApiResponse<ActionType>>(`${PREFIX}/action-types/${rid}`),
+  getActionTypeDraft: (rid: string) =>
+    apiClient.get<ApiResponse<ActionType>>(`${PREFIX}/action-types/${rid}/draft`),
   createActionType: (data: Record<string, unknown>) =>
     apiClient.post<ApiResponse<ActionType>>(`${PREFIX}/action-types`, data),
   updateActionType: (rid: string, data: Record<string, unknown>) =>
@@ -69,6 +75,8 @@ export const ontologyApi = {
     apiClient.post<PagedResponse<SharedPropertyType>>(`${PREFIX}/shared-property-types/query`, params),
   getSharedPropertyType: (rid: string) =>
     apiClient.get<ApiResponse<SharedPropertyType>>(`${PREFIX}/shared-property-types/${rid}`),
+  getSharedPropertyTypeDraft: (rid: string) =>
+    apiClient.get<ApiResponse<SharedPropertyType>>(`${PREFIX}/shared-property-types/${rid}/draft`),
   createSharedPropertyType: (data: Record<string, unknown>) =>
     apiClient.post<ApiResponse<SharedPropertyType>>(`${PREFIX}/shared-property-types`, data),
   updateSharedPropertyType: (rid: string, data: Record<string, unknown>) =>
