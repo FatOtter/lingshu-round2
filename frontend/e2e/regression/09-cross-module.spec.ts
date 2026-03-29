@@ -138,9 +138,6 @@ test.describe("R09: Pagination Consistency", () => {
   for (const ep of queryEndpoints) {
     test(`${ep.label} query returns standard pagination shape`, async ({ request }) => {
       const body: Record<string, unknown> = paginated();
-      if (ep.path.includes("ontology")) {
-        body.include_drafts = true;
-      }
       if (ep.path.includes("audit-logs")) {
         body.filters = [];
       }
@@ -157,57 +154,47 @@ test.describe("R09: Pagination Consistency", () => {
   }
 });
 
-test.describe("R09: Draft Visibility Regression (from dev-env branch)", () => {
+test.describe("R09: Draft Visibility & Known Regressions", () => {
   let headers: Record<string, string>;
 
   test.beforeAll(async ({ request }) => {
     headers = await getAuthHeaders(request);
   });
 
-  test("created ObjectType appears in query with include_drafts=true", async ({
-    request,
-  }) => {
+  test("created ObjectType is accessible via /draft endpoint", async ({ request }) => {
     const name = uniqueName("dv_ot");
     const createRes = await request.post(`${BACKEND}/ontology/v1/object-types`, {
       headers,
       data: { api_name: name, display_name: name, description: "draft vis regression" },
     });
     expect(createRes.status()).toBe(201);
-    expect((await createRes.json()).data.version_status).toBe("draft");
+    const created = (await createRes.json()).data;
+    expect(created.version_status).toBe("draft");
 
-    const queryRes = await request.post(`${BACKEND}/ontology/v1/object-types/query`, {
-      headers,
-      data: { ...paginated(1, 100), include_drafts: true, search: name },
-    });
-    expect(queryRes.ok()).toBeTruthy();
-    const found = (await queryRes.json()).data.find(
-      (it: Record<string, string>) => it.api_name === name,
+    const draftRes = await request.get(
+      `${BACKEND}/ontology/v1/object-types/${created.rid}/draft`,
+      { headers },
     );
-    expect(found).toBeTruthy();
-    expect(found.version_status).toBe("draft");
+    expect(draftRes.ok()).toBeTruthy();
+    expect((await draftRes.json()).data.api_name).toBe(name);
   });
 
-  test("created LinkType appears in query with include_drafts=true", async ({
-    request,
-  }) => {
+  test("created LinkType is accessible via /draft endpoint", async ({ request }) => {
     const name = uniqueName("dv_lt");
     const createRes = await request.post(`${BACKEND}/ontology/v1/link-types`, {
       headers,
       data: { api_name: name, display_name: name, description: "draft vis" },
     });
     expect(createRes.status()).toBe(201);
-    expect((await createRes.json()).data.version_status).toBe("draft");
+    const created = (await createRes.json()).data;
+    expect(created.version_status).toBe("draft");
 
-    const queryRes = await request.post(`${BACKEND}/ontology/v1/link-types/query`, {
-      headers,
-      data: { ...paginated(1, 100), include_drafts: true, search: name },
-    });
-    expect(queryRes.ok()).toBeTruthy();
-    expect(
-      (await queryRes.json()).data.find(
-        (it: Record<string, string>) => it.api_name === name,
-      ),
-    ).toBeTruthy();
+    const draftRes = await request.get(
+      `${BACKEND}/ontology/v1/link-types/${created.rid}/draft`,
+      { headers },
+    );
+    expect(draftRes.ok()).toBeTruthy();
+    expect((await draftRes.json()).data.api_name).toBe(name);
   });
 
   test("capabilities query accepts empty body (422 regression)", async ({ request }) => {

@@ -105,6 +105,11 @@ test.describe("R05: PropertyTypes", () => {
     });
     const otRid = (await createOtRes.json()).data.rid;
 
+    await request.post(
+      `${BACKEND}/ontology/v1/object-types/${otRid}/lock`,
+      { headers },
+    );
+
     const propName = uniqueName("prop");
     const createPropRes = await request.post(
       `${BACKEND}/ontology/v1/object-types/${otRid}/property-types`,
@@ -113,7 +118,7 @@ test.describe("R05: PropertyTypes", () => {
         data: {
           api_name: propName,
           display_name: `Prop ${propName}`,
-          base_type: "string",
+          data_type: "DT_STRING",
         },
       },
     );

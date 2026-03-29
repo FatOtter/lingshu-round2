@@ -5,6 +5,29 @@
 import { test, expect } from "@playwright/test";
 import { BACKEND, getAuthHeaders, uniqueName, paginated } from "./helpers";
 
+function funcData(apiName: string, displayName?: string) {
+  return {
+    api_name: apiName,
+    display_name: displayName ?? `Func ${apiName}`,
+    description: "regression",
+    parameters: [],
+    implementation: { engine: "python", code: "def run(params): return {'result': 'ok'}" },
+  };
+}
+
+function workflowData(apiName: string, displayName?: string) {
+  return {
+    api_name: apiName,
+    display_name: displayName ?? `WF ${apiName}`,
+    description: "regression",
+    nodes: [
+      { node_id: "start", type: "action", label: "Start" },
+      { node_id: "end", type: "action", label: "End" },
+    ],
+    edges: [{ source_node_id: "start", target_node_id: "end" }],
+  };
+}
+
 test.describe("R07: Global Functions", () => {
   let headers: Record<string, string>;
 
@@ -16,13 +39,7 @@ test.describe("R07: Global Functions", () => {
     const name = uniqueName("gfn");
     const res = await request.post(`${BACKEND}/function/v1/functions`, {
       headers,
-      data: {
-        name,
-        display_name: `Func ${name}`,
-        description: "regression",
-        engine: "python",
-        code: "def run(params): return {'result': 'ok'}",
-      },
+      data: funcData(name),
     });
     expect(res.status()).toBe(201);
     const body = await res.json();
@@ -43,14 +60,9 @@ test.describe("R07: Global Functions", () => {
     const name = uniqueName("fget");
     const createRes = await request.post(`${BACKEND}/function/v1/functions`, {
       headers,
-      data: {
-        name,
-        display_name: name,
-        description: "get test",
-        engine: "python",
-        code: "def run(params): return {}",
-      },
+      data: funcData(name),
     });
+    expect(createRes.status()).toBe(201);
     const rid = (await createRes.json()).data.rid;
 
     const res = await request.get(`${BACKEND}/function/v1/functions/${rid}`, { headers });
@@ -61,14 +73,9 @@ test.describe("R07: Global Functions", () => {
     const name = uniqueName("fupd");
     const createRes = await request.post(`${BACKEND}/function/v1/functions`, {
       headers,
-      data: {
-        name,
-        display_name: name,
-        description: "update",
-        engine: "python",
-        code: "def run(params): return {}",
-      },
+      data: funcData(name),
     });
+    expect(createRes.status()).toBe(201);
     const rid = (await createRes.json()).data.rid;
 
     const res = await request.put(`${BACKEND}/function/v1/functions/${rid}`, {
@@ -82,14 +89,9 @@ test.describe("R07: Global Functions", () => {
     const name = uniqueName("fdel");
     const createRes = await request.post(`${BACKEND}/function/v1/functions`, {
       headers,
-      data: {
-        name,
-        display_name: name,
-        description: "delete",
-        engine: "python",
-        code: "def run(params): return {}",
-      },
+      data: funcData(name),
     });
+    expect(createRes.status()).toBe(201);
     const rid = (await createRes.json()).data.rid;
 
     const res = await request.delete(`${BACKEND}/function/v1/functions/${rid}`, { headers });
@@ -161,18 +163,7 @@ test.describe("R07: Workflows", () => {
     const name = uniqueName("wf");
     const res = await request.post(`${BACKEND}/function/v1/workflows`, {
       headers,
-      data: {
-        name,
-        display_name: `WF ${name}`,
-        description: "regression",
-        definition: {
-          nodes: [
-            { id: "start", type: "start", label: "Start" },
-            { id: "end", type: "end", label: "End" },
-          ],
-          edges: [{ source: "start", target: "end" }],
-        },
-      },
+      data: workflowData(name),
     });
     expect(res.status()).toBe(201);
     const body = await res.json();
@@ -193,16 +184,9 @@ test.describe("R07: Workflows", () => {
     const name = uniqueName("wget");
     const createRes = await request.post(`${BACKEND}/function/v1/workflows`, {
       headers,
-      data: {
-        name,
-        display_name: name,
-        description: "get",
-        definition: {
-          nodes: [{ id: "s", type: "start", label: "S" }],
-          edges: [],
-        },
-      },
+      data: workflowData(name),
     });
+    expect(createRes.status()).toBe(201);
     const rid = (await createRes.json()).data.rid;
 
     const res = await request.get(`${BACKEND}/function/v1/workflows/${rid}`, { headers });
@@ -213,16 +197,9 @@ test.describe("R07: Workflows", () => {
     const name = uniqueName("wupd");
     const createRes = await request.post(`${BACKEND}/function/v1/workflows`, {
       headers,
-      data: {
-        name,
-        display_name: name,
-        description: "update",
-        definition: {
-          nodes: [{ id: "s", type: "start", label: "S" }],
-          edges: [],
-        },
-      },
+      data: workflowData(name),
     });
+    expect(createRes.status()).toBe(201);
     const rid = (await createRes.json()).data.rid;
 
     const res = await request.put(`${BACKEND}/function/v1/workflows/${rid}`, {
@@ -236,16 +213,9 @@ test.describe("R07: Workflows", () => {
     const name = uniqueName("wdel");
     const createRes = await request.post(`${BACKEND}/function/v1/workflows`, {
       headers,
-      data: {
-        name,
-        display_name: name,
-        description: "delete",
-        definition: {
-          nodes: [{ id: "s", type: "start", label: "S" }],
-          edges: [],
-        },
-      },
+      data: workflowData(name),
     });
+    expect(createRes.status()).toBe(201);
     const rid = (await createRes.json()).data.rid;
 
     const res = await request.delete(`${BACKEND}/function/v1/workflows/${rid}`, { headers });

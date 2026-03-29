@@ -16,12 +16,12 @@ test.describe("R03: Tenants & Members", () => {
     const name = uniqueName("tnt");
     const res = await request.post(`${BACKEND}/setting/v1/tenants`, {
       headers,
-      data: { name, display_name: `Tenant ${name}` },
+      data: { display_name: `Tenant ${name}` },
     });
     expect(res.status()).toBe(201);
     const body = await res.json();
     expect(body.data.rid).toMatch(/^ri\.tenant\./);
-    expect(body.data.name).toBe(name);
+    expect(body.data.display_name).toBe(`Tenant ${name}`);
   });
 
   test("POST /tenants/query returns paginated tenants", async ({ request }) => {
@@ -52,7 +52,7 @@ test.describe("R03: Tenants & Members", () => {
     const name = uniqueName("tupd");
     const createRes = await request.post(`${BACKEND}/setting/v1/tenants`, {
       headers,
-      data: { name, display_name: `Original ${name}` },
+      data: { display_name: `Original ${name}` },
     });
     const rid = (await createRes.json()).data.rid;
 
@@ -68,7 +68,7 @@ test.describe("R03: Tenants & Members", () => {
     const name = uniqueName("tdel");
     const createRes = await request.post(`${BACKEND}/setting/v1/tenants`, {
       headers,
-      data: { name, display_name: name },
+      data: { display_name: name },
     });
     const rid = (await createRes.json()).data.rid;
 
@@ -130,7 +130,7 @@ test.describe("R03: Roles", () => {
     const name = uniqueName("role");
     const res = await request.post(`${BACKEND}/setting/v1/roles`, {
       headers,
-      data: { name, display_name: `Role ${name}`, permissions: ["ontology:read"] },
+      data: { name, display_name: `Role ${name}`, permissions: [{ resource_type: "ontology", action: "read" }] },
     });
     expect(res.status()).toBe(201);
     const body = await res.json();
@@ -151,7 +151,7 @@ test.describe("R03: Roles", () => {
     const name = uniqueName("rget");
     const createRes = await request.post(`${BACKEND}/setting/v1/roles`, {
       headers,
-      data: { name, display_name: name, permissions: ["ontology:read"] },
+      data: { name, display_name: name, permissions: [{ resource_type: "ontology", action: "read" }] },
     });
     const rid = (await createRes.json()).data.rid;
 
@@ -164,13 +164,13 @@ test.describe("R03: Roles", () => {
     const name = uniqueName("rupd");
     const createRes = await request.post(`${BACKEND}/setting/v1/roles`, {
       headers,
-      data: { name, display_name: name, permissions: ["ontology:read"] },
+      data: { name, display_name: name, permissions: [{ resource_type: "ontology", action: "read" }] },
     });
     const rid = (await createRes.json()).data.rid;
 
     const res = await request.put(`${BACKEND}/setting/v1/roles/${rid}`, {
       headers,
-      data: { display_name: `Updated ${name}` },
+      data: { name: `updated_${name}`, description: "Updated description" },
     });
     expect(res.ok()).toBeTruthy();
   });
@@ -179,7 +179,7 @@ test.describe("R03: Roles", () => {
     const name = uniqueName("rdel");
     const createRes = await request.post(`${BACKEND}/setting/v1/roles`, {
       headers,
-      data: { name, display_name: name, permissions: ["ontology:read"] },
+      data: { name, display_name: name, permissions: [{ resource_type: "ontology", action: "read" }] },
     });
     const rid = (await createRes.json()).data.rid;
 

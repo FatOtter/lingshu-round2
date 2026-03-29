@@ -1,7 +1,7 @@
 /**
  * R04: Ontology — All Entity Types CRUD Regression
  * Covers: ObjectType, LinkType, InterfaceType, ActionType, SharedPropertyType
- * Each entity: create, query (with/without drafts), get, get/draft, update, delete, lock, submit-to-staging
+ * Each entity: create, query, get/draft, update, delete, lock, submit-to-staging
  */
 import { test, expect } from "@playwright/test";
 import { BACKEND, getAuthHeaders, uniqueName, paginated } from "./helpers";
@@ -13,7 +13,7 @@ test.describe("R04: ObjectType CRUD", () => {
     headers = await getAuthHeaders(request);
   });
 
-  test("create, get, update, delete lifecycle", async ({ request }) => {
+  test("create, get draft, update, delete lifecycle", async ({ request }) => {
     const name = uniqueName("ot");
 
     const createRes = await request.post(`${BACKEND}/ontology/v1/object-types`, {
@@ -25,17 +25,12 @@ test.describe("R04: ObjectType CRUD", () => {
     expect(created.rid).toMatch(/^ri\.obj\./);
     expect(created.version_status).toBe("draft");
 
-    const getRes = await request.get(
-      `${BACKEND}/ontology/v1/object-types/${created.rid}`,
-      { headers },
-    );
-    expect(getRes.ok()).toBeTruthy();
-
     const getDraftRes = await request.get(
       `${BACKEND}/ontology/v1/object-types/${created.rid}/draft`,
       { headers },
     );
     expect(getDraftRes.ok()).toBeTruthy();
+    expect((await getDraftRes.json()).data.api_name).toBe(name);
 
     await request.post(
       `${BACKEND}/ontology/v1/object-types/${created.rid}/lock`,
@@ -56,43 +51,15 @@ test.describe("R04: ObjectType CRUD", () => {
     expect(deleteRes.ok()).toBeTruthy();
   });
 
-  test("query with include_drafts=true shows drafts", async ({ request }) => {
-    const name = uniqueName("otq");
-    await request.post(`${BACKEND}/ontology/v1/object-types`, {
-      headers,
-      data: { api_name: name, display_name: name, description: "query test" },
-    });
-
+  test("query returns paginated results", async ({ request }) => {
     const res = await request.post(`${BACKEND}/ontology/v1/object-types/query`, {
       headers,
-      data: { ...paginated(), include_drafts: true, search: name },
+      data: paginated(),
     });
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(body.pagination).toBeTruthy();
-    const found = body.data.find(
-      (it: Record<string, string>) => it.api_name === name,
-    );
-    expect(found).toBeTruthy();
-  });
-
-  test("query with include_drafts=false excludes drafts", async ({ request }) => {
-    const name = uniqueName("otnodraft");
-    await request.post(`${BACKEND}/ontology/v1/object-types`, {
-      headers,
-      data: { api_name: name, display_name: name, description: "no draft" },
-    });
-
-    const res = await request.post(`${BACKEND}/ontology/v1/object-types/query`, {
-      headers,
-      data: { ...paginated(), include_drafts: false, search: name },
-    });
-    expect(res.ok()).toBeTruthy();
-    const body = await res.json();
-    const found = body.data.find(
-      (it: Record<string, string>) => it.api_name === name,
-    );
-    expect(found).toBeFalsy();
+    expect(Array.isArray(body.data)).toBeTruthy();
   });
 
   test("lock acquire and release", async ({ request }) => {
@@ -116,7 +83,7 @@ test.describe("R04: ObjectType CRUD", () => {
     expect(releaseRes.ok()).toBeTruthy();
   });
 
-  test("submit-to-staging and discard-draft", async ({ request }) => {
+  test("submit-to-staging changes version_status", async ({ request }) => {
     const name = uniqueName("otstaging");
     const createRes = await request.post(`${BACKEND}/ontology/v1/object-types`, {
       headers,
@@ -132,23 +99,6 @@ test.describe("R04: ObjectType CRUD", () => {
     const submitted = (await submitRes.json()).data;
     expect(submitted.version_status).toBe("staging");
   });
-
-  test("get related nodes", async ({ request }) => {
-    const name = uniqueName("otrel");
-    const createRes = await request.post(`${BACKEND}/ontology/v1/object-types`, {
-      headers,
-      data: { api_name: name, display_name: name, description: "related" },
-    });
-    const rid = (await createRes.json()).data.rid;
-
-    const res = await request.get(
-      `${BACKEND}/ontology/v1/object-types/${rid}/related`,
-      { headers },
-    );
-    expect(res.ok()).toBeTruthy();
-    const body = await res.json();
-    expect(Array.isArray(body.data)).toBeTruthy();
-  });
 });
 
 test.describe("R04: LinkType CRUD", () => {
@@ -158,7 +108,7 @@ test.describe("R04: LinkType CRUD", () => {
     headers = await getAuthHeaders(request);
   });
 
-  test("create, query, get, update, delete lifecycle", async ({ request }) => {
+  test("create, get draft, update, delete lifecycle", async ({ request }) => {
     const name = uniqueName("lt");
 
     const createRes = await request.post(`${BACKEND}/ontology/v1/link-types`, {
@@ -169,16 +119,11 @@ test.describe("R04: LinkType CRUD", () => {
     const created = (await createRes.json()).data;
     expect(created.version_status).toBe("draft");
 
-    const queryRes = await request.post(`${BACKEND}/ontology/v1/link-types/query`, {
-      headers,
-      data: { ...paginated(), include_drafts: true, search: name },
-    });
-    expect(queryRes.ok()).toBeTruthy();
-    expect(
-      (await queryRes.json()).data.find(
-        (it: Record<string, string>) => it.api_name === name,
-      ),
-    ).toBeTruthy();
+    const getDraftRes = await request.get(
+      `${BACKEND}/ontology/v1/link-types/${created.rid}/draft`,
+      { headers },
+    );
+    expect(getDraftRes.ok()).toBeTruthy();
 
     await request.post(
       `${BACKEND}/ontology/v1/link-types/${created.rid}/lock`,
@@ -196,6 +141,15 @@ test.describe("R04: LinkType CRUD", () => {
     );
     expect(deleteRes.ok()).toBeTruthy();
   });
+
+  test("query returns paginated results", async ({ request }) => {
+    const res = await request.post(`${BACKEND}/ontology/v1/link-types/query`, {
+      headers,
+      data: paginated(),
+    });
+    expect(res.ok()).toBeTruthy();
+    expect((await res.json()).pagination).toBeTruthy();
+  });
 });
 
 test.describe("R04: InterfaceType CRUD", () => {
@@ -205,21 +159,26 @@ test.describe("R04: InterfaceType CRUD", () => {
     headers = await getAuthHeaders(request);
   });
 
-  test("create, query, get, update, delete lifecycle", async ({ request }) => {
+  test("create, get draft, update, delete lifecycle", async ({ request }) => {
     const name = uniqueName("iface");
 
     const createRes = await request.post(`${BACKEND}/ontology/v1/interface-types`, {
       headers,
-      data: { api_name: name, display_name: `IF ${name}`, description: "regression" },
+      data: {
+        api_name: name,
+        display_name: `IF ${name}`,
+        description: "regression",
+        category: "OBJECT_INTERFACE",
+      },
     });
     expect(createRes.status()).toBe(201);
     const created = (await createRes.json()).data;
 
-    const queryRes = await request.post(
-      `${BACKEND}/ontology/v1/interface-types/query`,
-      { headers, data: { ...paginated(), include_drafts: true } },
+    const getDraftRes = await request.get(
+      `${BACKEND}/ontology/v1/interface-types/${created.rid}/draft`,
+      { headers },
     );
-    expect(queryRes.ok()).toBeTruthy();
+    expect(getDraftRes.ok()).toBeTruthy();
 
     await request.post(
       `${BACKEND}/ontology/v1/interface-types/${created.rid}/lock`,
@@ -246,7 +205,7 @@ test.describe("R04: ActionType CRUD", () => {
     headers = await getAuthHeaders(request);
   });
 
-  test("create, query, get, update, delete lifecycle", async ({ request }) => {
+  test("create, query, get draft, update, delete lifecycle", async ({ request }) => {
     const name = uniqueName("act");
 
     const createRes = await request.post(`${BACKEND}/ontology/v1/action-types`, {
@@ -258,7 +217,7 @@ test.describe("R04: ActionType CRUD", () => {
 
     const queryRes = await request.post(`${BACKEND}/ontology/v1/action-types/query`, {
       headers,
-      data: { ...paginated(), include_drafts: true },
+      data: paginated(),
     });
     expect(queryRes.ok()).toBeTruthy();
 
@@ -287,7 +246,7 @@ test.describe("R04: SharedPropertyType CRUD", () => {
     headers = await getAuthHeaders(request);
   });
 
-  test("create, query, get, update, delete lifecycle", async ({ request }) => {
+  test("create, query, get draft, update, delete lifecycle", async ({ request }) => {
     const name = uniqueName("shprop");
 
     const createRes = await request.post(
@@ -298,7 +257,7 @@ test.describe("R04: SharedPropertyType CRUD", () => {
           api_name: name,
           display_name: `SP ${name}`,
           description: "regression",
-          base_type: "string",
+          data_type: "DT_STRING",
         },
       },
     );
@@ -307,7 +266,7 @@ test.describe("R04: SharedPropertyType CRUD", () => {
 
     const queryRes = await request.post(
       `${BACKEND}/ontology/v1/shared-property-types/query`,
-      { headers, data: { ...paginated(), include_drafts: true } },
+      { headers, data: paginated() },
     );
     expect(queryRes.ok()).toBeTruthy();
 

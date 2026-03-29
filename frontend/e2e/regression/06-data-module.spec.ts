@@ -5,6 +5,20 @@
 import { test, expect } from "@playwright/test";
 import { BACKEND, getAuthHeaders, uniqueName, paginated } from "./helpers";
 
+function connData(displayName: string) {
+  return {
+    display_name: displayName,
+    type: "postgresql",
+    config: {
+      host: "localhost",
+      port: 5432,
+      database: "test",
+      username: "test",
+      password: "test",
+    },
+  };
+}
+
 test.describe("R06: Data Connections", () => {
   let headers: Record<string, string>;
 
@@ -16,23 +30,12 @@ test.describe("R06: Data Connections", () => {
     const name = uniqueName("conn");
     const res = await request.post(`${BACKEND}/data/v1/connections`, {
       headers,
-      data: {
-        name,
-        display_name: `Connection ${name}`,
-        connector_type: "postgresql",
-        config: {
-          host: "localhost",
-          port: 5432,
-          database: "test",
-          username: "test",
-          password: "test",
-        },
-      },
+      data: connData(`Connection ${name}`),
     });
     expect(res.status()).toBe(201);
     const body = await res.json();
     expect(body.data.rid).toMatch(/^ri\.conn\./);
-    expect(body.data.name).toBe(name);
+    expect(body.data.display_name).toBe(`Connection ${name}`);
   });
 
   test("POST /connections/query returns paginated connections", async ({ request }) => {
@@ -50,13 +53,9 @@ test.describe("R06: Data Connections", () => {
     const name = uniqueName("cget");
     const createRes = await request.post(`${BACKEND}/data/v1/connections`, {
       headers,
-      data: {
-        name,
-        display_name: name,
-        connector_type: "postgresql",
-        config: { host: "localhost", port: 5432, database: "t", username: "t", password: "t" },
-      },
+      data: connData(name),
     });
+    expect(createRes.status()).toBe(201);
     const rid = (await createRes.json()).data.rid;
 
     const res = await request.get(`${BACKEND}/data/v1/connections/${rid}`, { headers });
@@ -68,13 +67,9 @@ test.describe("R06: Data Connections", () => {
     const name = uniqueName("cupd");
     const createRes = await request.post(`${BACKEND}/data/v1/connections`, {
       headers,
-      data: {
-        name,
-        display_name: name,
-        connector_type: "postgresql",
-        config: { host: "localhost", port: 5432, database: "t", username: "t", password: "t" },
-      },
+      data: connData(name),
     });
+    expect(createRes.status()).toBe(201);
     const rid = (await createRes.json()).data.rid;
 
     const res = await request.put(`${BACKEND}/data/v1/connections/${rid}`, {
@@ -88,13 +83,9 @@ test.describe("R06: Data Connections", () => {
     const name = uniqueName("cdel");
     const createRes = await request.post(`${BACKEND}/data/v1/connections`, {
       headers,
-      data: {
-        name,
-        display_name: name,
-        connector_type: "postgresql",
-        config: { host: "localhost", port: 5432, database: "t", username: "t", password: "t" },
-      },
+      data: connData(name),
     });
+    expect(createRes.status()).toBe(201);
     const rid = (await createRes.json()).data.rid;
 
     const res = await request.delete(`${BACKEND}/data/v1/connections/${rid}`, { headers });
@@ -105,13 +96,9 @@ test.describe("R06: Data Connections", () => {
     const name = uniqueName("ctest");
     const createRes = await request.post(`${BACKEND}/data/v1/connections`, {
       headers,
-      data: {
-        name,
-        display_name: name,
-        connector_type: "postgresql",
-        config: { host: "localhost", port: 5432, database: "t", username: "t", password: "t" },
-      },
+      data: connData(name),
     });
+    expect(createRes.status()).toBe(201);
     const rid = (await createRes.json()).data.rid;
 
     const res = await request.post(`${BACKEND}/data/v1/connections/${rid}/test`, {
