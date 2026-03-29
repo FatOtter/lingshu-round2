@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ExecutionConfigEditor } from "@/components/ontology/execution-config-editor";
-import { Save, Code, Settings, Trash2 } from "lucide-react";
+import { Save, Code, Settings, Trash2, Upload } from "lucide-react";
 import { ApiClientError } from "@/lib/api/client";
 
 export default function ActionTypeEditorPage() {
@@ -82,6 +82,20 @@ export default function ActionTypeEditorPage() {
     },
   });
 
+  const submitToStagingMutation = useMutation({
+    mutationFn: () => ontologyApi.submitToStaging("action-types", rid),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ontology", "action-type", rid] });
+      queryClient.invalidateQueries({ queryKey: ["ontology", "action-types"] });
+    },
+    onError: (err) => {
+      const message = err instanceof ApiClientError
+        ? `${err.code}: ${err.message}`
+        : "Failed to submit to staging";
+      setSaveError(message);
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async () => {
       await ontologyApi.acquireLock("action-types", rid);
@@ -130,6 +144,16 @@ export default function ActionTypeEditorPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {!isNew && actionType?.version_status === "draft" && (
+            <Button
+              variant="outline"
+              onClick={() => submitToStagingMutation.mutate()}
+              disabled={submitToStagingMutation.isPending}
+            >
+              <Upload className="size-4" />
+              {submitToStagingMutation.isPending ? "Submitting..." : "Submit to Staging"}
+            </Button>
+          )}
           {!isNew && (
             <Button
               variant="destructive"

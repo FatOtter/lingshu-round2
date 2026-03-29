@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Save, Trash2 } from "lucide-react";
+import { Save, Trash2, Upload } from "lucide-react";
 import { ApiClientError } from "@/lib/api/client";
 
 export default function SharedPropertyTypeEditorPage() {
@@ -76,6 +76,20 @@ export default function SharedPropertyTypeEditorPage() {
     },
   });
 
+  const submitToStagingMutation = useMutation({
+    mutationFn: () => ontologyApi.submitToStaging("shared-property-types", rid),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ontology", "shared-property-type", rid] });
+      queryClient.invalidateQueries({ queryKey: ["ontology", "shared-property-types"] });
+    },
+    onError: (err) => {
+      const message = err instanceof ApiClientError
+        ? `${err.code}: ${err.message}`
+        : "Failed to submit to staging";
+      setSaveError(message);
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async () => {
       await ontologyApi.acquireLock("shared-property-types", rid);
@@ -115,6 +129,16 @@ export default function SharedPropertyTypeEditorPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {!isNew && sharedPropertyType?.version_status === "draft" && (
+            <Button
+              variant="outline"
+              onClick={() => submitToStagingMutation.mutate()}
+              disabled={submitToStagingMutation.isPending}
+            >
+              <Upload className="size-4" />
+              {submitToStagingMutation.isPending ? "Submitting..." : "Submit to Staging"}
+            </Button>
+          )}
           {!isNew && (
             <Button
               variant="destructive"
