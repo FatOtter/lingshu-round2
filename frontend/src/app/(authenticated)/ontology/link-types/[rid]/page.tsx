@@ -73,8 +73,11 @@ export default function LinkTypeEditorPage() {
     setInitialized(true);
   }
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const saveMutation = useMutation({
     mutationFn: () => {
+      setSaveError(null);
       const payload = {
         api_name: apiName,
         display_name: displayName,
@@ -88,9 +91,18 @@ export default function LinkTypeEditorPage() {
       }
       return ontologyApi.updateLinkType(rid, payload);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["ontology", "link-type", rid] });
       queryClient.invalidateQueries({ queryKey: ["ontology", "link-types"] });
+      if (isNew && result?.data?.rid) {
+        router.push(`/ontology/link-types/${result.data.rid}`);
+      }
+    },
+    onError: (err) => {
+      const message = err instanceof ApiClientError
+        ? `${err.code}: ${err.message}`
+        : "Failed to save link type";
+      setSaveError(message);
     },
   });
 
@@ -148,6 +160,12 @@ export default function LinkTypeEditorPage() {
           </Button>
         </div>
       </div>
+
+      {saveError && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <Tabs defaultValue="info">
         <TabsList>

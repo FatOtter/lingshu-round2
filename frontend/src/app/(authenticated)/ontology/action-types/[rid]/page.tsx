@@ -50,8 +50,11 @@ export default function ActionTypeEditorPage() {
     setInitialized(true);
   }
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const saveMutation = useMutation({
     mutationFn: () => {
+      setSaveError(null);
       const payload = {
         api_name: apiName,
         display_name: displayName,
@@ -64,9 +67,18 @@ export default function ActionTypeEditorPage() {
       }
       return ontologyApi.updateActionType(rid, payload);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["ontology", "action-type", rid] });
       queryClient.invalidateQueries({ queryKey: ["ontology", "action-types"] });
+      if (isNew && result?.data?.rid) {
+        router.push(`/ontology/action-types/${result.data.rid}`);
+      }
+    },
+    onError: (err) => {
+      const message = err instanceof ApiClientError
+        ? `${err.code}: ${err.message}`
+        : "Failed to save action type";
+      setSaveError(message);
     },
   });
 
@@ -133,6 +145,12 @@ export default function ActionTypeEditorPage() {
           </Button>
         </div>
       </div>
+
+      {saveError && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <Tabs defaultValue="info">
         <TabsList>

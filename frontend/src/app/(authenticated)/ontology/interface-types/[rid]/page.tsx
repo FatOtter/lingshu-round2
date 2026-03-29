@@ -50,17 +50,29 @@ export default function InterfaceTypeEditorPage() {
     setInitialized(true);
   }
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const saveMutation = useMutation({
     mutationFn: () => {
+      setSaveError(null);
       const payload = { api_name: apiName, display_name: displayName, description };
       if (isNew) {
         return ontologyApi.createInterfaceType(payload);
       }
       return ontologyApi.updateInterfaceType(rid, payload);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["ontology", "interface-type", rid] });
       queryClient.invalidateQueries({ queryKey: ["ontology", "interface-types"] });
+      if (isNew && result?.data?.rid) {
+        router.push(`/ontology/interface-types/${result.data.rid}`);
+      }
+    },
+    onError: (err) => {
+      const message = err instanceof ApiClientError
+        ? `${err.code}: ${err.message}`
+        : "Failed to save interface type";
+      setSaveError(message);
     },
   });
 
@@ -118,6 +130,12 @@ export default function InterfaceTypeEditorPage() {
           </Button>
         </div>
       </div>
+
+      {saveError && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <Tabs defaultValue="info">
         <TabsList>
