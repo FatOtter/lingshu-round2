@@ -203,6 +203,37 @@ class GraphRepository:
 
     # ── List / Query ──────────────────────────────────────────────
 
+    async def list_nodes(
+        self,
+        label: str,
+        tenant_id: str,
+        *,
+        offset: int = 0,
+        limit: int = 20,
+        filters: dict[str, Any] | None = None,
+        search: str | None = None,
+        include_drafts: bool = False,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """List nodes with optional filters and search.
+
+        When include_drafts is True, returns both active and draft nodes.
+        Otherwise only returns committed active nodes.
+        """
+        where_parts: list[str] = ["n.tenant_id = $tenant_id"]
+        if include_drafts:
+            where_parts.append("(n.is_active = true OR n.is_draft = true)")
+        else:
+            where_parts.extend([
+                "n.is_draft = false",
+                "n.is_staging = false",
+                "n.is_active = true",
+            ])
+        return await self._list_nodes_with_where(
+            label, where_parts, tenant_id,
+            offset=offset, limit=limit,
+            filters=filters, search=search,
+        )
+
     async def list_active_nodes(
         self,
         label: str,
@@ -220,6 +251,24 @@ class GraphRepository:
             "n.is_staging = false",
             "n.is_active = true",
         ]
+        return await self._list_nodes_with_where(
+            label, where_parts, tenant_id,
+            offset=offset, limit=limit,
+            filters=filters, search=search,
+        )
+
+    async def _list_nodes_with_where(
+        self,
+        label: str,
+        where_parts: list[str],
+        tenant_id: str,
+        *,
+        offset: int = 0,
+        limit: int = 20,
+        filters: dict[str, Any] | None = None,
+        search: str | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Shared helper for list queries with pre-built WHERE parts."""
         params: dict[str, Any] = {"tenant_id": tenant_id, "offset": offset, "limit": limit}
 
         if filters:

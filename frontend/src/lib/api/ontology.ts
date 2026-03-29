@@ -15,8 +15,14 @@ const PREFIX = "/ontology/v1";
 
 export const ontologyApi = {
   // ObjectType
-  queryObjectTypes: (params?: { offset?: number; limit?: number; branch?: string }) =>
-    apiClient.post<PagedResponse<ObjectType>>(`${PREFIX}/object-types/query`, params),
+  queryObjectTypes: (params?: { offset?: number; limit?: number; branch?: string }) => {
+    const page = params?.offset !== undefined && params?.limit ? Math.floor(params.offset / params.limit) + 1 : 1;
+    const page_size = params?.limit ?? 20;
+    return apiClient.post<PagedResponse<ObjectType>>(`${PREFIX}/object-types/query`, {
+      pagination: { page, page_size },
+      include_drafts: true,
+    });
+  },
   getObjectType: (rid: string, branch?: string) =>
     apiClient.get<ApiResponse<ObjectType>>(`${PREFIX}/object-types/${rid}${branch ? `?branch=${branch}` : ""}`),
   getObjectTypeDraft: (rid: string) =>
@@ -29,8 +35,14 @@ export const ontologyApi = {
     apiClient.delete<ApiResponse<null>>(`${PREFIX}/object-types/${rid}`),
 
   // LinkType
-  queryLinkTypes: (params?: { offset?: number; limit?: number; branch?: string }) =>
-    apiClient.post<PagedResponse<LinkType>>(`${PREFIX}/link-types/query`, params),
+  queryLinkTypes: (params?: { offset?: number; limit?: number; branch?: string }) => {
+    const page = params?.offset !== undefined && params?.limit ? Math.floor(params.offset / params.limit) + 1 : 1;
+    const page_size = params?.limit ?? 20;
+    return apiClient.post<PagedResponse<LinkType>>(`${PREFIX}/link-types/query`, {
+      pagination: { page, page_size },
+      include_drafts: true,
+    });
+  },
   getLinkType: (rid: string, branch?: string) =>
     apiClient.get<ApiResponse<LinkType>>(`${PREFIX}/link-types/${rid}${branch ? `?branch=${branch}` : ""}`),
   createLinkType: (data: Record<string, unknown>) =>
@@ -41,8 +53,14 @@ export const ontologyApi = {
     apiClient.delete<ApiResponse<null>>(`${PREFIX}/link-types/${rid}`),
 
   // InterfaceType
-  queryInterfaceTypes: (params?: { offset?: number; limit?: number }) =>
-    apiClient.post<PagedResponse<InterfaceType>>(`${PREFIX}/interface-types/query`, params),
+  queryInterfaceTypes: (params?: { offset?: number; limit?: number }) => {
+    const page = params?.offset !== undefined && params?.limit ? Math.floor(params.offset / params.limit) + 1 : 1;
+    const page_size = params?.limit ?? 20;
+    return apiClient.post<PagedResponse<InterfaceType>>(`${PREFIX}/interface-types/query`, {
+      pagination: { page, page_size },
+      include_drafts: true,
+    });
+  },
   getInterfaceType: (rid: string) =>
     apiClient.get<ApiResponse<InterfaceType>>(`${PREFIX}/interface-types/${rid}`),
   createInterfaceType: (data: Record<string, unknown>) =>
@@ -53,8 +71,14 @@ export const ontologyApi = {
     apiClient.delete<ApiResponse<null>>(`${PREFIX}/interface-types/${rid}`),
 
   // ActionType
-  queryActionTypes: (params?: { offset?: number; limit?: number }) =>
-    apiClient.post<PagedResponse<ActionType>>(`${PREFIX}/action-types/query`, params),
+  queryActionTypes: (params?: { offset?: number; limit?: number }) => {
+    const page = params?.offset !== undefined && params?.limit ? Math.floor(params.offset / params.limit) + 1 : 1;
+    const page_size = params?.limit ?? 20;
+    return apiClient.post<PagedResponse<ActionType>>(`${PREFIX}/action-types/query`, {
+      pagination: { page, page_size },
+      include_drafts: true,
+    });
+  },
   getActionType: (rid: string) =>
     apiClient.get<ApiResponse<ActionType>>(`${PREFIX}/action-types/${rid}`),
   createActionType: (data: Record<string, unknown>) =>
@@ -65,8 +89,14 @@ export const ontologyApi = {
     apiClient.delete<ApiResponse<null>>(`${PREFIX}/action-types/${rid}`),
 
   // SharedPropertyType
-  querySharedPropertyTypes: (params?: { offset?: number; limit?: number }) =>
-    apiClient.post<PagedResponse<SharedPropertyType>>(`${PREFIX}/shared-property-types/query`, params),
+  querySharedPropertyTypes: (params?: { offset?: number; limit?: number }) => {
+    const page = params?.offset !== undefined && params?.limit ? Math.floor(params.offset / params.limit) + 1 : 1;
+    const page_size = params?.limit ?? 20;
+    return apiClient.post<PagedResponse<SharedPropertyType>>(`${PREFIX}/shared-property-types/query`, {
+      pagination: { page, page_size },
+      include_drafts: true,
+    });
+  },
   getSharedPropertyType: (rid: string) =>
     apiClient.get<ApiResponse<SharedPropertyType>>(`${PREFIX}/shared-property-types/${rid}`),
   createSharedPropertyType: (data: Record<string, unknown>) =>
@@ -95,8 +125,13 @@ export const ontologyApi = {
     apiClient.post<ApiResponse<null>>(`${PREFIX}/staging/discard`, { rids }),
 
   // Snapshots
-  querySnapshots: (params?: { offset?: number; limit?: number }) =>
-    apiClient.post<PagedResponse<Snapshot>>(`${PREFIX}/snapshots/query`, params),
+  querySnapshots: (params?: { offset?: number; limit?: number }) => {
+    const page = params?.offset !== undefined && params?.limit ? Math.floor(params.offset / params.limit) + 1 : 1;
+    const page_size = params?.limit ?? 20;
+    return apiClient.post<PagedResponse<Snapshot>>(`${PREFIX}/snapshots/query`, {
+      pagination: { page, page_size },
+    });
+  },
   getSnapshot: (snapshotId: string) =>
     apiClient.get<ApiResponse<Snapshot>>(`${PREFIX}/snapshots/${snapshotId}`),
   rollbackSnapshot: (snapshotId: string) =>

@@ -52,8 +52,14 @@ export function useAuth() {
       try {
         await settingApi.refresh();
       } catch {
-        clearAuth();
-        router.push("/login");
+        // In dev mode (header-based auth), refresh is expected to fail.
+        // Only redirect to login if /auth/me also fails (session truly expired).
+        try {
+          await settingApi.me();
+        } catch {
+          clearAuth();
+          router.push("/login");
+        }
       }
     }, REFRESH_INTERVAL_MS);
 
