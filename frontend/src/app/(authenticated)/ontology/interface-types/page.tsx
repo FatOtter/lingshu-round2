@@ -65,7 +65,7 @@ export default function InterfaceTypesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "interface-types", "list", page],
-    queryFn: () => ontologyApi.queryInterfaceTypes({ offset: (page - 1) * pageSize, limit: pageSize }),
+    queryFn: () => ontologyApi.queryInterfaceTypes({ pagination: { page, page_size: pageSize } }),
   });
 
   if (isLoading && !data) {

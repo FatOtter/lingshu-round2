@@ -42,7 +42,7 @@ export default function SharedPropertyTypesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "shared-property-types", "list", page],
-    queryFn: () => ontologyApi.querySharedPropertyTypes({ offset: (page - 1) * pageSize, limit: pageSize }),
+    queryFn: () => ontologyApi.querySharedPropertyTypes({ pagination: { page, page_size: pageSize } }),
   });
 
   if (isLoading && !data) {

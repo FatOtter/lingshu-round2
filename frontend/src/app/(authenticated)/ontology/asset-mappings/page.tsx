@@ -10,7 +10,7 @@ import type { ObjectType } from "@/types/ontology";
 export default function AssetMappingsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "object-types", "all-for-mappings"],
-    queryFn: () => ontologyApi.queryObjectTypes({ limit: 500 }),
+    queryFn: () => ontologyApi.queryObjectTypes({ pagination: { page: 1, page_size: 500 } }),
   });
 
   if (isLoading && !data) {

@@ -39,7 +39,7 @@ export default function LinkTypesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "link-types", "list", page],
-    queryFn: () => ontologyApi.queryLinkTypes({ offset: (page - 1) * pageSize, limit: pageSize }),
+    queryFn: () => ontologyApi.queryLinkTypes({ pagination: { page, page_size: pageSize } }),
   });
 
   if (isLoading && !data) {

@@ -10,27 +10,27 @@ import { Box, Link2, Puzzle, Zap, Share2, Network } from "lucide-react";
 export default function OntologyOverviewPage() {
   const { data: objectTypes, isLoading: loadingOT } = useQuery({
     queryKey: ["ontology", "object-types"],
-    queryFn: () => ontologyApi.queryObjectTypes({ limit: 1 }),
+    queryFn: () => ontologyApi.queryObjectTypes({ pagination: { page: 1, page_size: 1 } }),
   });
 
   const { data: linkTypes, isLoading: loadingLT } = useQuery({
     queryKey: ["ontology", "link-types"],
-    queryFn: () => ontologyApi.queryLinkTypes({ limit: 1 }),
+    queryFn: () => ontologyApi.queryLinkTypes({ pagination: { page: 1, page_size: 1 } }),
   });
 
   const { data: interfaceTypes, isLoading: loadingIT } = useQuery({
     queryKey: ["ontology", "interface-types"],
-    queryFn: () => ontologyApi.queryInterfaceTypes({ limit: 1 }),
+    queryFn: () => ontologyApi.queryInterfaceTypes({ pagination: { page: 1, page_size: 1 } }),
   });
 
   const { data: actionTypes, isLoading: loadingAT } = useQuery({
     queryKey: ["ontology", "action-types"],
-    queryFn: () => ontologyApi.queryActionTypes({ limit: 1 }),
+    queryFn: () => ontologyApi.queryActionTypes({ pagination: { page: 1, page_size: 1 } }),
   });
 
   const { data: sharedPropertyTypes, isLoading: loadingSPT } = useQuery({
     queryKey: ["ontology", "shared-property-types"],
-    queryFn: () => ontologyApi.querySharedPropertyTypes({ limit: 1 }),
+    queryFn: () => ontologyApi.querySharedPropertyTypes({ pagination: { page: 1, page_size: 1 } }),
   });
 
   const isLoading = loadingOT || loadingLT || loadingIT || loadingAT || loadingSPT;
