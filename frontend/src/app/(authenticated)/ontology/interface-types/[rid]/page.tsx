@@ -30,7 +30,7 @@ export default function InterfaceTypeEditorPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "interface-type", rid],
-    queryFn: () => ontologyApi.getInterfaceType(rid),
+    queryFn: () => ontologyApi.getInterfaceTypeDraft(rid),
     enabled: !isNew,
   });
 

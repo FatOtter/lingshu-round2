@@ -23,7 +23,7 @@ export default function SharedPropertyTypeEditorPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "shared-property-type", rid],
-    queryFn: () => ontologyApi.getSharedPropertyType(rid),
+    queryFn: () => ontologyApi.getSharedPropertyTypeDraft(rid),
     enabled: !isNew,
   });
 

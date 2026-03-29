@@ -47,7 +47,7 @@ export default function LinkTypeEditorPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "link-type", rid],
-    queryFn: () => ontologyApi.getLinkType(rid),
+    queryFn: () => ontologyApi.getLinkTypeDraft(rid),
     enabled: !isNew,
   });
 

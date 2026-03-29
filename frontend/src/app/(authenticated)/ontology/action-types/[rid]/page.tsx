@@ -26,7 +26,7 @@ export default function ActionTypeEditorPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "action-type", rid],
-    queryFn: () => ontologyApi.getActionType(rid),
+    queryFn: () => ontologyApi.getActionTypeDraft(rid),
     enabled: !isNew,
   });
 
