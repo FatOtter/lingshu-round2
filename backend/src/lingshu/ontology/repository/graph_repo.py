@@ -254,6 +254,52 @@ class GraphRepository:
 
         return nodes, total
 
+    async def list_nodes(
+        self,
+        label: str,
+        tenant_id: str,
+        *,
+        offset: int = 0,
+        limit: int = 20,
+        filters: dict[str, Any] | None = None,
+        search: str | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """List all nodes (active + draft + staging) with optional filters and search."""
+        where_parts = ["n.tenant_id = $tenant_id"]
+        params: dict[str, Any] = {"tenant_id": tenant_id, "offset": offset, "limit": limit}
+
+        if filters:
+            for key, value in filters.items():
+                param_key = f"f_{key}"
+                where_parts.append(f"n.{key} = ${param_key}")
+                params[param_key] = value
+
+        if search:
+            where_parts.append(
+                "(n.api_name CONTAINS $search OR "
+                "n.display_name CONTAINS $search OR "
+                "n.description CONTAINS $search)"
+            )
+            params["search"] = search
+
+        where_clause = " AND ".join(where_parts)
+
+        count_query = f"MATCH (n:{label}) WHERE {where_clause} RETURN count(n) AS total"
+        data_query = (
+            f"MATCH (n:{label}) WHERE {where_clause} "
+            "RETURN n ORDER BY n.created_at DESC SKIP $offset LIMIT $limit"
+        )
+
+        async with self._driver.session() as session:
+            count_result = await session.run(count_query, **params)
+            count_record = await count_result.single()
+            total = count_record["total"] if count_record else 0
+
+            data_result = await session.run(data_query, **params)
+            nodes = [dict(record["n"]) async for record in data_result]
+
+        return nodes, total
+
     # ── Relationships ─────────────────────────────────────────────
 
     async def create_relationship(

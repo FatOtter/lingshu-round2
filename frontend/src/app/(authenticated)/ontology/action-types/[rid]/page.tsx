@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ExecutionConfigEditor } from "@/components/ontology/execution-config-editor";
-import { Save, Code, Settings, Trash2 } from "lucide-react";
+import { Save, Code, Settings, Trash2, Upload } from "lucide-react";
 import { ApiClientError } from "@/lib/api/client";
 
 export default function ActionTypeEditorPage() {
@@ -26,7 +26,7 @@ export default function ActionTypeEditorPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "action-type", rid],
-    queryFn: () => ontologyApi.getActionType(rid),
+    queryFn: () => ontologyApi.getActionTypeDraft(rid),
     enabled: !isNew,
   });
 
@@ -50,8 +50,11 @@ export default function ActionTypeEditorPage() {
     setInitialized(true);
   }
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const saveMutation = useMutation({
     mutationFn: () => {
+      setSaveError(null);
       const payload = {
         api_name: apiName,
         display_name: displayName,
@@ -64,9 +67,32 @@ export default function ActionTypeEditorPage() {
       }
       return ontologyApi.updateActionType(rid, payload);
     },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["ontology", "action-type", rid] });
+      queryClient.invalidateQueries({ queryKey: ["ontology", "action-types"] });
+      if (isNew && result?.data?.rid) {
+        router.push(`/ontology/action-types/${result.data.rid}`);
+      }
+    },
+    onError: (err) => {
+      const message = err instanceof ApiClientError
+        ? `${err.code}: ${err.message}`
+        : "Failed to save action type";
+      setSaveError(message);
+    },
+  });
+
+  const submitToStagingMutation = useMutation({
+    mutationFn: () => ontologyApi.submitToStaging("action-types", rid),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ontology", "action-type", rid] });
       queryClient.invalidateQueries({ queryKey: ["ontology", "action-types"] });
+    },
+    onError: (err) => {
+      const message = err instanceof ApiClientError
+        ? `${err.code}: ${err.message}`
+        : "Failed to submit to staging";
+      setSaveError(message);
     },
   });
 
@@ -118,6 +144,16 @@ export default function ActionTypeEditorPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {!isNew && actionType?.version_status === "draft" && (
+            <Button
+              variant="outline"
+              onClick={() => submitToStagingMutation.mutate()}
+              disabled={submitToStagingMutation.isPending}
+            >
+              <Upload className="size-4" />
+              {submitToStagingMutation.isPending ? "Submitting..." : "Submit to Staging"}
+            </Button>
+          )}
           {!isNew && (
             <Button
               variant="destructive"
@@ -133,6 +169,12 @@ export default function ActionTypeEditorPage() {
           </Button>
         </div>
       </div>
+
+      {saveError && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <Tabs defaultValue="info">
         <TabsList>

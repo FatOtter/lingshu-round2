@@ -51,7 +51,7 @@ export default function ActionTypesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "action-types", "list", page],
-    queryFn: () => ontologyApi.queryActionTypes({ offset: (page - 1) * pageSize, limit: pageSize }),
+    queryFn: () => ontologyApi.queryActionTypes({ pagination: { page, page_size: pageSize } }),
   });
 
   if (isLoading && !data) {

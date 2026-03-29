@@ -30,7 +30,7 @@ export default function VersionsPage() {
 
   const { data: snapshotsData, isLoading: loadingSnapshots, error: snapshotsError } = useQuery({
     queryKey: ["ontology", "snapshots", page],
-    queryFn: () => ontologyApi.querySnapshots({ offset: (page - 1) * pageSize, limit: pageSize }),
+    queryFn: () => ontologyApi.querySnapshots({ pagination: { page, page_size: pageSize } }),
     retry: 1,
   });
 

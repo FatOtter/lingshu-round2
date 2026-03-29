@@ -37,7 +37,7 @@ const columns: ColumnDef<PropertyType>[] = [
 export default function PropertiesPage() {
   const { data: objectTypesData, isLoading: loadingOT } = useQuery({
     queryKey: ["ontology", "object-types", "all"],
-    queryFn: () => ontologyApi.queryObjectTypes({ limit: 500 }),
+    queryFn: () => ontologyApi.queryObjectTypes({ pagination: { page: 1, page_size: 500 } }),
   });
 
   const isLoading = loadingOT;

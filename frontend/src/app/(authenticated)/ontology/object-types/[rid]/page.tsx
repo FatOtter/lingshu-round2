@@ -15,7 +15,7 @@ import { DataTable, type ColumnDef } from "@/components/ui/data-table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AssetMappingEditor } from "@/components/ontology/asset-mapping-editor";
-import { Save, Database, Trash2 } from "lucide-react";
+import { Save, Database, Trash2, Upload } from "lucide-react";
 import type { PropertyType } from "@/types/ontology";
 import { ApiClientError } from "@/lib/api/client";
 
@@ -54,7 +54,7 @@ export default function ObjectTypeEditorPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "object-type", rid],
-    queryFn: () => ontologyApi.getObjectType(rid),
+    queryFn: () => ontologyApi.getObjectTypeDraft(rid),
     enabled: !isNew,
   });
 
@@ -74,17 +74,43 @@ export default function ObjectTypeEditorPage() {
     setInitialized(true);
   }
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const saveMutation = useMutation({
     mutationFn: () => {
+      setSaveError(null);
       const payload = { api_name: apiName, display_name: displayName, description };
       if (isNew) {
         return ontologyApi.createObjectType(payload);
       }
       return ontologyApi.updateObjectType(rid, payload);
     },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["ontology", "object-type", rid] });
+      queryClient.invalidateQueries({ queryKey: ["ontology", "object-types"] });
+      if (isNew && result?.data?.rid) {
+        router.push(`/ontology/object-types/${result.data.rid}`);
+      }
+    },
+    onError: (err) => {
+      const message = err instanceof ApiClientError
+        ? `${err.code}: ${err.message}`
+        : "Failed to save object type";
+      setSaveError(message);
+    },
+  });
+
+  const submitToStagingMutation = useMutation({
+    mutationFn: () => ontologyApi.submitToStaging("object-types", rid),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ontology", "object-type", rid] });
       queryClient.invalidateQueries({ queryKey: ["ontology", "object-types"] });
+    },
+    onError: (err) => {
+      const message = err instanceof ApiClientError
+        ? `${err.code}: ${err.message}`
+        : "Failed to submit to staging";
+      setSaveError(message);
     },
   });
 
@@ -127,6 +153,16 @@ export default function ObjectTypeEditorPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {!isNew && objectType?.version_status === "draft" && (
+            <Button
+              variant="outline"
+              onClick={() => submitToStagingMutation.mutate()}
+              disabled={submitToStagingMutation.isPending}
+            >
+              <Upload className="size-4" />
+              {submitToStagingMutation.isPending ? "Submitting..." : "Submit to Staging"}
+            </Button>
+          )}
           {!isNew && (
             <Button
               variant="destructive"
@@ -142,6 +178,12 @@ export default function ObjectTypeEditorPage() {
           </Button>
         </div>
       </div>
+
+      {saveError && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <Tabs defaultValue="info">
         <TabsList>

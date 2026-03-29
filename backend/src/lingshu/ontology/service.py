@@ -313,7 +313,7 @@ class OntologyServiceImpl:
         if lifecycle_status:
             filters["lifecycle_status"] = lifecycle_status
 
-        nodes, total = await self._graph.list_active_nodes(
+        nodes, total = await self._graph.list_nodes(
             label, tenant_id,
             offset=offset, limit=limit,
             filters=filters if filters else None,

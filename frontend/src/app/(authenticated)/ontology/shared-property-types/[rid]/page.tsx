@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Save, Trash2 } from "lucide-react";
+import { Save, Trash2, Upload } from "lucide-react";
 import { ApiClientError } from "@/lib/api/client";
 
 export default function SharedPropertyTypeEditorPage() {
@@ -23,7 +23,7 @@ export default function SharedPropertyTypeEditorPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "shared-property-type", rid],
-    queryFn: () => ontologyApi.getSharedPropertyType(rid),
+    queryFn: () => ontologyApi.getSharedPropertyTypeDraft(rid),
     enabled: !isNew,
   });
 
@@ -45,8 +45,11 @@ export default function SharedPropertyTypeEditorPage() {
     setInitialized(true);
   }
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const saveMutation = useMutation({
     mutationFn: () => {
+      setSaveError(null);
       const payload = {
         api_name: apiName,
         display_name: displayName,
@@ -58,9 +61,32 @@ export default function SharedPropertyTypeEditorPage() {
       }
       return ontologyApi.updateSharedPropertyType(rid, payload);
     },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["ontology", "shared-property-type", rid] });
+      queryClient.invalidateQueries({ queryKey: ["ontology", "shared-property-types"] });
+      if (isNew && result?.data?.rid) {
+        router.push(`/ontology/shared-property-types/${result.data.rid}`);
+      }
+    },
+    onError: (err) => {
+      const message = err instanceof ApiClientError
+        ? `${err.code}: ${err.message}`
+        : "Failed to save shared property type";
+      setSaveError(message);
+    },
+  });
+
+  const submitToStagingMutation = useMutation({
+    mutationFn: () => ontologyApi.submitToStaging("shared-property-types", rid),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ontology", "shared-property-type", rid] });
       queryClient.invalidateQueries({ queryKey: ["ontology", "shared-property-types"] });
+    },
+    onError: (err) => {
+      const message = err instanceof ApiClientError
+        ? `${err.code}: ${err.message}`
+        : "Failed to submit to staging";
+      setSaveError(message);
     },
   });
 
@@ -103,6 +129,16 @@ export default function SharedPropertyTypeEditorPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {!isNew && sharedPropertyType?.version_status === "draft" && (
+            <Button
+              variant="outline"
+              onClick={() => submitToStagingMutation.mutate()}
+              disabled={submitToStagingMutation.isPending}
+            >
+              <Upload className="size-4" />
+              {submitToStagingMutation.isPending ? "Submitting..." : "Submit to Staging"}
+            </Button>
+          )}
           {!isNew && (
             <Button
               variant="destructive"
@@ -118,6 +154,12 @@ export default function SharedPropertyTypeEditorPage() {
           </Button>
         </div>
       </div>
+
+      {saveError && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <div className="grid max-w-xl gap-4">
         <div className="grid gap-1.5">

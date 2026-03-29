@@ -46,7 +46,7 @@ export default function ObjectTypesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["ontology", "object-types", "list", page],
-    queryFn: () => ontologyApi.queryObjectTypes({ offset: (page - 1) * pageSize, limit: pageSize }),
+    queryFn: () => ontologyApi.queryObjectTypes({ pagination: { page, page_size: pageSize } }),
   });
 
   if (isLoading && !data) {

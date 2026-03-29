@@ -15,7 +15,7 @@ const PREFIX = "/ontology/v1";
 
 export const ontologyApi = {
   // ObjectType
-  queryObjectTypes: (params?: { offset?: number; limit?: number; branch?: string }) =>
+  queryObjectTypes: (params?: { pagination?: { page: number; page_size: number }; search?: string; lifecycle_status?: string }) =>
     apiClient.post<PagedResponse<ObjectType>>(`${PREFIX}/object-types/query`, params),
   getObjectType: (rid: string, branch?: string) =>
     apiClient.get<ApiResponse<ObjectType>>(`${PREFIX}/object-types/${rid}${branch ? `?branch=${branch}` : ""}`),
@@ -29,10 +29,12 @@ export const ontologyApi = {
     apiClient.delete<ApiResponse<null>>(`${PREFIX}/object-types/${rid}`),
 
   // LinkType
-  queryLinkTypes: (params?: { offset?: number; limit?: number; branch?: string }) =>
+  queryLinkTypes: (params?: { pagination?: { page: number; page_size: number }; search?: string }) =>
     apiClient.post<PagedResponse<LinkType>>(`${PREFIX}/link-types/query`, params),
   getLinkType: (rid: string, branch?: string) =>
     apiClient.get<ApiResponse<LinkType>>(`${PREFIX}/link-types/${rid}${branch ? `?branch=${branch}` : ""}`),
+  getLinkTypeDraft: (rid: string) =>
+    apiClient.get<ApiResponse<LinkType>>(`${PREFIX}/link-types/${rid}/draft`),
   createLinkType: (data: Record<string, unknown>) =>
     apiClient.post<ApiResponse<LinkType>>(`${PREFIX}/link-types`, data),
   updateLinkType: (rid: string, data: Record<string, unknown>) =>
@@ -41,10 +43,12 @@ export const ontologyApi = {
     apiClient.delete<ApiResponse<null>>(`${PREFIX}/link-types/${rid}`),
 
   // InterfaceType
-  queryInterfaceTypes: (params?: { offset?: number; limit?: number }) =>
+  queryInterfaceTypes: (params?: { pagination?: { page: number; page_size: number }; search?: string }) =>
     apiClient.post<PagedResponse<InterfaceType>>(`${PREFIX}/interface-types/query`, params),
   getInterfaceType: (rid: string) =>
     apiClient.get<ApiResponse<InterfaceType>>(`${PREFIX}/interface-types/${rid}`),
+  getInterfaceTypeDraft: (rid: string) =>
+    apiClient.get<ApiResponse<InterfaceType>>(`${PREFIX}/interface-types/${rid}/draft`),
   createInterfaceType: (data: Record<string, unknown>) =>
     apiClient.post<ApiResponse<InterfaceType>>(`${PREFIX}/interface-types`, data),
   updateInterfaceType: (rid: string, data: Record<string, unknown>) =>
@@ -53,10 +57,12 @@ export const ontologyApi = {
     apiClient.delete<ApiResponse<null>>(`${PREFIX}/interface-types/${rid}`),
 
   // ActionType
-  queryActionTypes: (params?: { offset?: number; limit?: number }) =>
+  queryActionTypes: (params?: { pagination?: { page: number; page_size: number }; search?: string }) =>
     apiClient.post<PagedResponse<ActionType>>(`${PREFIX}/action-types/query`, params),
   getActionType: (rid: string) =>
     apiClient.get<ApiResponse<ActionType>>(`${PREFIX}/action-types/${rid}`),
+  getActionTypeDraft: (rid: string) =>
+    apiClient.get<ApiResponse<ActionType>>(`${PREFIX}/action-types/${rid}/draft`),
   createActionType: (data: Record<string, unknown>) =>
     apiClient.post<ApiResponse<ActionType>>(`${PREFIX}/action-types`, data),
   updateActionType: (rid: string, data: Record<string, unknown>) =>
@@ -65,10 +71,12 @@ export const ontologyApi = {
     apiClient.delete<ApiResponse<null>>(`${PREFIX}/action-types/${rid}`),
 
   // SharedPropertyType
-  querySharedPropertyTypes: (params?: { offset?: number; limit?: number }) =>
+  querySharedPropertyTypes: (params?: { pagination?: { page: number; page_size: number }; search?: string }) =>
     apiClient.post<PagedResponse<SharedPropertyType>>(`${PREFIX}/shared-property-types/query`, params),
   getSharedPropertyType: (rid: string) =>
     apiClient.get<ApiResponse<SharedPropertyType>>(`${PREFIX}/shared-property-types/${rid}`),
+  getSharedPropertyTypeDraft: (rid: string) =>
+    apiClient.get<ApiResponse<SharedPropertyType>>(`${PREFIX}/shared-property-types/${rid}/draft`),
   createSharedPropertyType: (data: Record<string, unknown>) =>
     apiClient.post<ApiResponse<SharedPropertyType>>(`${PREFIX}/shared-property-types`, data),
   updateSharedPropertyType: (rid: string, data: Record<string, unknown>) =>
@@ -89,13 +97,13 @@ export const ontologyApi = {
     apiClient.post<ApiResponse<null>>(`${PREFIX}/${entityType}/${rid}/submit-to-staging`),
   getStagingSummary: () =>
     apiClient.get<ApiResponse<StagingSummary>>(`${PREFIX}/staging/summary`),
-  commitStaging: (description: string) =>
-    apiClient.post<ApiResponse<Snapshot>>(`${PREFIX}/staging/commit`, { description }),
+  commitStaging: (commitMessage: string) =>
+    apiClient.post<ApiResponse<Snapshot>>(`${PREFIX}/staging/commit`, { commit_message: commitMessage }),
   discardStaging: (rids?: string[]) =>
     apiClient.post<ApiResponse<null>>(`${PREFIX}/staging/discard`, { rids }),
 
   // Snapshots
-  querySnapshots: (params?: { offset?: number; limit?: number }) =>
+  querySnapshots: (params?: { pagination?: { page: number; page_size: number } }) =>
     apiClient.post<PagedResponse<Snapshot>>(`${PREFIX}/snapshots/query`, params),
   getSnapshot: (snapshotId: string) =>
     apiClient.get<ApiResponse<Snapshot>>(`${PREFIX}/snapshots/${snapshotId}`),

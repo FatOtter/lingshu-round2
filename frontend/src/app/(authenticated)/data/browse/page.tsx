@@ -19,12 +19,12 @@ export default function BrowseDataPage() {
 
   const { data: objectTypesData, isLoading: loadingOT } = useQuery({
     queryKey: ["ontology", "object-types", "browse"],
-    queryFn: () => ontologyApi.queryObjectTypes({ limit: 200 }),
+    queryFn: () => ontologyApi.queryObjectTypes({ pagination: { page: 1, page_size: 200 } }),
   });
 
   const { data: linkTypesData, isLoading: loadingLT } = useQuery({
     queryKey: ["ontology", "link-types", "browse"],
-    queryFn: () => ontologyApi.queryLinkTypes({ limit: 200 }),
+    queryFn: () => ontologyApi.queryLinkTypes({ pagination: { page: 1, page_size: 200 } }),
   });
 
   const isLoading = loadingOT || loadingLT;
